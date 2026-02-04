@@ -15,3 +15,16 @@ class MainApp extends StatelessWidget {
     );
   }
 }
+
+class Tile extends StatelessWidget {
+  const Tile(this.letter, this.hitType, {super.key});
+
+  final String letter;
+  final HitType hitType;
+
+  @override
+  Widget build(BuildContext context) {
+    // replace container with widget
+    return Container();
+  }
+}
