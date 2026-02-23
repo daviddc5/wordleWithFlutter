@@ -13,7 +13,7 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       home: Scaffold(
         body: Center(
-          child: Tile('A', HitType.hit), // NEW
+          child: Tile('A', HitType.miss), // NEW
         ),
       ),
     );
