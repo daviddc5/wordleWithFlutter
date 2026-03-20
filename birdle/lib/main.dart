@@ -12,9 +12,10 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        body: Center(
-          child: Tile('A', HitType.miss), // NEW
+        appBar: AppBar(
+          title: Align(alignment: Alignment.centerLeft, child: Text('Birdle')),
         ),
+        body: Center(child: Text('Hello World!')),
       ),
     );
   }
