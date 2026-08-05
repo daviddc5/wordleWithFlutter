@@ -116,3 +116,78 @@ Turn this tutorial project into a small, polished Wordle-style game that feels f
 1. Phase 1 (ship-ready core): daily mode, streaks, share card, and polished UI.
 2. Phase 2 (retention growth): hard mode, hint system, and improved onboarding.
 3. Phase 3 (monetization and scale): optional ads or premium tier, deeper stats, and live events.
+
+## Current Status (Completed)
+- Core guessing loop is implemented.
+- Legal-guess validation and feedback are implemented.
+- Restart flow is implemented.
+- Tile color animation is implemented.
+- UI refresh is in progress and already improved from tutorial baseline.
+- Expanded legal word lists are implemented.
+
+## Next Sprint (Offline-First)
+1. Add local stats storage (games played, wins, streak, best streak).
+2. Add end-of-round summary card with retry/share actions.
+3. Add shareable result text grid (spoiler-free).
+4. Add mode switch between Practice and Daily.
+5. Add basic settings panel (sound on/off, hard mode toggle placeholder).
+
+## Sprint Backlog With Acceptance Criteria
+
+### 1) Local Stats
+- Track: games played, wins, current streak, best streak.
+- Persist locally so app restart keeps stats.
+- Acceptance: play, close app, reopen, stats remain.
+
+### 2) Round Summary UI
+- Show round summary on win/loss.
+- Include attempts used and restart button.
+- Acceptance: summary appears immediately after game ends.
+
+### 3) Share Result
+- Generate Wordle-style square output using emoji blocks.
+- Include attempts and app name.
+- Acceptance: user can copy/share without revealing the hidden word.
+
+### 4) Daily Mode (Offline)
+- Pick a deterministic daily word from local list based on date.
+- Keep one puzzle per day.
+- Acceptance: same day gives same word; next day gives a different word.
+
+### 5) Practice Mode
+- Keep current random word behavior.
+- Toggle between Daily and Practice.
+- Acceptance: mode switch changes selection logic correctly.
+
+## Technical Plan (File-Level)
+- `lib/game.dart`
+	- Add deterministic daily word selection helper.
+	- Keep practice mode random selection.
+- `lib/main.dart`
+	- Add mode toggle UI.
+	- Add summary card and stats display panel.
+	- Hook up share action.
+- `pubspec.yaml`
+	- Add local storage package for stats persistence.
+	- Add optional share package for clipboard/share sheet.
+
+## Offline Data Model
+- `gamesPlayed`: int
+- `gamesWon`: int
+- `currentStreak`: int
+- `bestStreak`: int
+- `lastPlayedDate`: yyyy-mm-dd
+- `lastDailyResult`: win/loss/unfinished
+
+## Risk Notes
+- Keep duplicate words out of answer list when expanding dictionaries.
+- Keep daily word logic timezone-safe (local date boundary).
+- Avoid making hard mode block beginners by default.
+
+## Definition Of Done For Phase 1
+- No overflow on common mobile dimensions.
+- No crashes on invalid guesses.
+- Offline play works end-to-end.
+- Daily mode + Practice mode both functional.
+- Stats persist between app launches.
+- Share output works and does not leak hidden word.

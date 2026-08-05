@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
 
 void main() {
@@ -64,9 +65,18 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage>
     with SingleTickerProviderStateMixin {
   final Game _game = Game();
+  static const _gamesPlayedKey = 'gamesPlayed';
+  static const _gamesWonKey = 'gamesWon';
+  static const _currentStreakKey = 'currentStreak';
+  static const _bestStreakKey = 'bestStreak';
+
   String? _message;
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
+  int _gamesPlayed = 0;
+  int _gamesWon = 0;
+  int _currentStreak = 0;
+  int _bestStreak = 0;
 
   bool get _isGameOver => _game.didWin || _game.didLose;
 
@@ -75,6 +85,7 @@ class _GamePageState extends State<GamePage>
   @override
   void initState() {
     super.initState();
+    _loadStats();
     _shakeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 450),
@@ -149,6 +160,65 @@ class _GamePageState extends State<GamePage>
     });
   }
 
+  Future<void> _loadStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    setState(() {
+      _gamesPlayed = prefs.getInt(_gamesPlayedKey) ?? 0;
+      _gamesWon = prefs.getInt(_gamesWonKey) ?? 0;
+      _currentStreak = prefs.getInt(_currentStreakKey) ?? 0;
+      _bestStreak = prefs.getInt(_bestStreakKey) ?? 0;
+    });
+  }
+
+  Future<void> _saveStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_gamesPlayedKey, _gamesPlayed);
+    await prefs.setInt(_gamesWonKey, _gamesWon);
+    await prefs.setInt(_currentStreakKey, _currentStreak);
+    await prefs.setInt(_bestStreakKey, _bestStreak);
+  }
+
+  void _recordGameResult({required bool didWin}) {
+    _gamesPlayed += 1;
+
+    if (didWin) {
+      _gamesWon += 1;
+      _currentStreak += 1;
+      if (_currentStreak > _bestStreak) {
+        _bestStreak = _currentStreak;
+      }
+    } else {
+      _currentStreak = 0;
+    }
+
+    _saveStats();
+  }
+
+  Widget _buildStat(String label, int value) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$value',
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.black54,
+          ),
+        ),
+      ],
+    );
+  }
+
   void _handleSubmitGuess(String guess) {
     setState(() {
       if (_isGameOver) {
@@ -165,8 +235,10 @@ class _GamePageState extends State<GamePage>
       _game.guess(guess);
 
       if (_game.didWin) {
+        _recordGameResult(didWin: true);
         _message = 'You won!';
       } else if (_game.didLose) {
+        _recordGameResult(didWin: false);
         _message =
             'You lost. The word was ${_game.hiddenWord.toString().toUpperCase()}.';
       } else {
@@ -220,6 +292,25 @@ class _GamePageState extends State<GamePage>
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+              ),
+              const SizedBox(height: 12.0),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5FAF6),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFD8E6DC)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStat('Played', _gamesPlayed),
+                    _buildStat('Wins', _gamesWon),
+                    _buildStat('Streak', _currentStreak),
+                    _buildStat('Best', _bestStreak),
+                  ],
+                ),
               ),
               const SizedBox(height: 18.0),
               for (var guess in _game.guesses) _buildGuessRow(guess),
