@@ -13,17 +13,38 @@ class MainApp extends StatelessWidget {
   @override
   // build is called whenever widget needs to be rebuilt, which can happen for a variety of reasons. In this case, since MainApp is a stateless widget, it will only be built once, when the app starts. The build method returns a widget tree, which is what will be rendered on the screen.
   Widget build(BuildContext context) {
-    // Material app is a widget that provides a lot of the basic functionality for a Flutter app, such as theming, navigation, and more. It also sets up the app to use Material Design, which is a design language developed by Google. The home property is the widget that will be shown when the app starts, and in this case it's a Scaffold, which is a basic layout widget that provides an app bar and a body.
     return MaterialApp(
-      //Scaffold is a widget that provides a basic layout for the app, with an app bar and a body. The app bar is a horizontal bar at the top of the screen that typically contains the title of the app and some actions. The body is the main content of the app, and in this case it's a GamePage, which will show the guesses and tiles.
-      home: Scaffold(
-        //App bar is a widget that provides a horizontal bar at the top of the screen, which typically contains the title of the app and some actions. In this case, we're just showing the title of the app, which is 'Birdle'.
-        appBar: AppBar(
-          // title is the widget that will be shown in the app bar, and in this case it's a Text widget that shows 'Birdle'. The Align widget is used to align the title to the left, which is a common design choice for app bars.
-          title: Align(alignment: Alignment.centerLeft, child: Text('Birdle')),
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1F5C4B),
+          brightness: Brightness.light,
         ),
-        // The body of the scaffold is the main content of the app, and in this case it's a GamePage, which will show the guesses and tiles. The Center widget is used to center the GamePage in the middle of the screen.
-        body: Center(child: GamePage()),
+        useMaterial3: true,
+      ),
+      home: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF1F5C4B),
+          foregroundColor: Colors.white,
+          title: const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Birdle',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFF4F7F3), Color(0xFFE7EFE9)],
+            ),
+          ),
+          child: const Center(child: GamePage()),
+        ),
       ),
     );
   }
@@ -36,51 +57,255 @@ class GamePage extends StatefulWidget {
   State<GamePage> createState() => _GamePageState();
 }
 
-class _GamePageState extends State<GamePage> {
+class _GamePageState extends State<GamePage>
+    with SingleTickerProviderStateMixin {
   final Game _game = Game();
+  String? _message;
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
+
+  bool get _isGameOver => _game.didWin || _game.didLose;
+
+  int get _guessesLeft => _game.guessesRemaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: -10.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 1,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: -10.0, end: 10.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 2,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 10.0, end: -8.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 2,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: -8.0, end: 8.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 2,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 8.0, end: -4.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 1,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: -4.0, end: 4.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 1,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 4.0, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 1,
+      ),
+    ]).animate(_shakeController);
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
+  }
+
+  void _triggerInvalidGuessShake() {
+    _shakeController.forward(from: 0.0);
+  }
+
+  void _restartGame() {
+    setState(() {
+      _game.resetGame();
+      _message = null;
+    });
+  }
+
+  void _handleSubmitGuess(String guess) {
+    setState(() {
+      if (_isGameOver) {
+        _message = 'Game over. Tap restart to play again.';
+        return;
+      }
+
+      if (!_game.isLegalGuess(guess)) {
+        _message = 'That is not a legal 5-letter guess.';
+        _triggerInvalidGuessShake();
+        return;
+      }
+
+      _game.guess(guess);
+
+      if (_game.didWin) {
+        _message = 'You won!';
+      } else if (_game.didLose) {
+        _message =
+            'You lost. The word was ${_game.hiddenWord.toString().toUpperCase()}.';
+      } else {
+        _message = null;
+      }
+    });
+  }
+
+  Widget _buildGuessRow(Word guess) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var letter in guess)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2.5),
+              child: Tile(letter.char, letter.type),
+            ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        children: [
-          for (var guess in _game.guesses)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var letter in guess)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 2.5,
-                      vertical: 2.5,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 420),
+      child: Card(
+        elevation: 10,
+        shadowColor: Colors.black.withValues(alpha: 0.12),
+        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Guess the word in 5 tries',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1F5C4B),
                     ),
-                    child: Tile(letter.char, letter.type),
+              ),
+              const SizedBox(height: 6.0),
+              Text(
+                'Use the clues to narrow it down.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.black54,
+                    ),
+              ),
+              const SizedBox(height: 18.0),
+              for (var guess in _game.guesses) _buildGuessRow(guess),
+              const SizedBox(height: 16.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Chip(
+                    avatar: const Icon(Icons.timer_outlined, size: 18),
+                    label: Text('$_guessesLeft guesses left'),
+                    backgroundColor: const Color(0xFFEAF2EC),
+                    side: BorderSide.none,
                   ),
-              ],
-            ),
-          GuessInput(
-            onSubmitGuess: (String guess) {
-              setState(() {
-                _game.guess(guess);
-              });
-            },
+                  const SizedBox(width: 8.0),
+                  if (_isGameOver)
+                    Chip(
+                      avatar: Icon(
+                        _game.didWin ? Icons.emoji_events : Icons.close,
+                        size: 18,
+                      ),
+                      label: Text(_game.didWin ? 'You won' : 'Game over'),
+                      backgroundColor: _game.didWin
+                          ? const Color(0xFFDDF3E1)
+                          : const Color(0xFFF4E0E0),
+                      side: BorderSide.none,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10.0),
+              AnimatedBuilder(
+                animation: _shakeController,
+                child: GuessInput(
+                  enabled: !_isGameOver,
+                  onSubmitGuess: _handleSubmitGuess,
+                ),
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(_shakeAnimation.value, 0),
+                    child: child,
+                  );
+                },
+              ),
+              const SizedBox(height: 8.0),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _message == null
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        key: ValueKey(_message),
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14.0,
+                            vertical: 12.0,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5FAF6),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0xFFD8E6DC)),
+                          ),
+                          child: Text(
+                            _message!,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: const Color(0xFF1F5C4B),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 10.0),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF1F5C4B),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                onPressed: _restartGame,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Restart game'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
 class GuessInput extends StatelessWidget {
-  GuessInput({super.key, required this.onSubmitGuess});
+  GuessInput({super.key, required this.onSubmitGuess, required this.enabled});
 
   final void Function(String) onSubmitGuess;
+  final bool enabled;
 
   final TextEditingController _textEditingController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
   void _onSubmit() {
+    if (!enabled) {
+      return;
+    }
+
     onSubmitGuess(_textEditingController.text.trim());
     _textEditingController.clear();
     _focusNode.requestFocus();
@@ -95,6 +320,7 @@ class GuessInput extends StatelessWidget {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               maxLength: 5,
+              enabled: enabled,
               controller: _textEditingController,
               autofocus: true,
               focusNode: _focusNode,
@@ -110,7 +336,7 @@ class GuessInput extends StatelessWidget {
         IconButton(
           padding: EdgeInsets.zero,
           icon: const Icon(Icons.arrow_circle_up),
-          onPressed: _onSubmit,
+          onPressed: enabled ? _onSubmit : null,
         ),
       ],
     );
@@ -128,21 +354,28 @@ class Tile extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
       curve: Curves.bounceIn,
-      width: 60,
-      height: 60,
+      width: 58,
+      height: 58,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300, width: 1.2),
         color: switch (hitType) {
-          HitType.hit => Colors.green,
-          HitType.partial => Colors.yellow,
-          HitType.miss => Colors.grey,
-          _ => Colors.white,
+          HitType.hit => const Color(0xFF4FAF63),
+          HitType.partial => const Color(0xFFE0B84E),
+          HitType.miss => const Color(0xFF8A98A6),
+          _ => const Color(0xFFF9FAF7),
         },
       ),
       child: Center(
         child: Text(
           letter.toUpperCase(),
-          style: Theme.of(context).textTheme.titleLarge,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: switch (hitType) {
+                  HitType.none => const Color(0xFF1F5C4B),
+                  _ => Colors.white,
+                },
+              ),
         ),
       ),
     );

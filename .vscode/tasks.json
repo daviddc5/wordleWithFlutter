@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Birdle Chrome",
+			"type": "shell",
+			"command": "cd birdle && flutter run -d chrome",
+			"isBackground": false,
+			"problemMatcher": [
+				"$flutter-watch"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run Birdle Chrome",
+			"type": "shell",
+			"command": "cd birdle && flutter run -d chrome",
+			"isBackground": true,
+			"problemMatcher": [
+				"$flutter-watch"
+			],
+			"group": "build"
+		}
+	]
+}
