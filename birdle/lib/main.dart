@@ -31,7 +31,7 @@ class MainApp extends StatelessWidget {
 
 class GamePage extends StatelessWidget {
   GamePage({super.key});
-  // This manages game logic, and is out of scope for this lesson.
+
   final Game _game = Game();
 
   @override
@@ -48,6 +48,12 @@ class GamePage extends StatelessWidget {
                 for (var letter in guess) Tile(letter.char, letter.type),
               ],
             ),
+          GuessInput(
+            onSubmitGuess: (guess) {
+              // TODO, handle guess
+              print(guess);
+            },
+          ),
         ],
       ),
     );
@@ -59,6 +65,15 @@ class GuessInput extends StatelessWidget {
 
   final void Function(String) onSubmitGuess;
 
+  final TextEditingController _textEditingController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+
+  void _onSubmit() {
+    onSubmitGuess(_textEditingController.text.trim());
+    _textEditingController.clear();
+    _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -68,13 +83,22 @@ class GuessInput extends StatelessWidget {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               maxLength: 5,
-              decoration: InputDecoration(
+              controller: _textEditingController,
+              autofocus: true,
+              focusNode: _focusNode,
+              decoration: const InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(35)),
                 ),
               ),
+              onSubmitted: (_) => _onSubmit(),
             ),
           ),
+        ),
+        IconButton(
+          padding: EdgeInsets.zero,
+          icon: const Icon(Icons.arrow_circle_up),
+          onPressed: _onSubmit,
         ),
       ],
     );
