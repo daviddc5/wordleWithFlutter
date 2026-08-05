@@ -29,7 +29,7 @@ class MainApp extends StatelessWidget {
           title: const Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Birdle',
+              'Wordle',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),

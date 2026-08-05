@@ -1,3 +1,3 @@
-# birdle
+# wordle
 
 A new Flutter project.
