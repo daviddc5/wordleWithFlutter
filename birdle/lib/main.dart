@@ -43,7 +43,11 @@ class MainApp extends StatelessWidget {
               colors: [Color(0xFFF4F7F3), Color(0xFFE7EFE9)],
             ),
           ),
-          child: const Center(child: GamePage()),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: const Center(child: GamePage()),
+            ),
+          ),
         ),
       ),
     );
