@@ -202,18 +202,12 @@ class _GamePageState extends State<GamePage>
       children: [
         Text(
           '$value',
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.black54,
-          ),
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
       ],
     );
@@ -296,7 +290,10 @@ class _GamePageState extends State<GamePage>
               const SizedBox(height: 12.0),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5FAF6),
                   borderRadius: BorderRadius.circular(14),
@@ -402,23 +399,50 @@ class _GamePageState extends State<GamePage>
   }
 }
 
-class GuessInput extends StatelessWidget {
-  GuessInput({super.key, required this.onSubmitGuess, required this.enabled});
+class GuessInput extends StatefulWidget {
+  const GuessInput({
+    super.key,
+    required this.onSubmitGuess,
+    required this.enabled,
+  });
 
   final void Function(String) onSubmitGuess;
   final bool enabled;
 
-  final TextEditingController _textEditingController = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  @override
+  State<GuessInput> createState() => _GuessInputState();
+}
+
+class _GuessInputState extends State<GuessInput> {
+  late final TextEditingController _textEditingController;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _textEditingController = TextEditingController();
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _textEditingController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   void _onSubmit() {
-    if (!enabled) {
+    if (!widget.enabled) {
       return;
     }
 
-    onSubmitGuess(_textEditingController.text.trim());
+    widget.onSubmitGuess(_textEditingController.text.trim());
     _textEditingController.clear();
-    _focusNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.enabled) {
+        _focusNode.requestFocus();
+      }
+    });
   }
 
   @override
@@ -430,7 +454,7 @@ class GuessInput extends StatelessWidget {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               maxLength: 5,
-              enabled: enabled,
+              enabled: widget.enabled,
               controller: _textEditingController,
               autofocus: true,
               focusNode: _focusNode,
@@ -446,7 +470,7 @@ class GuessInput extends StatelessWidget {
         IconButton(
           padding: EdgeInsets.zero,
           icon: const Icon(Icons.arrow_circle_up),
-          onPressed: enabled ? _onSubmit : null,
+          onPressed: widget.enabled ? _onSubmit : null,
         ),
       ],
     );
