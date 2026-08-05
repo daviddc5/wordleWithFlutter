@@ -77,38 +77,52 @@ class _GamePageState extends State<GamePage>
     );
     _shakeAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: -10.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(
+          begin: 0.0,
+          end: -10.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 1,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: -10.0, end: 10.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(
+          begin: -10.0,
+          end: 10.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 2,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 10.0, end: -8.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(
+          begin: 10.0,
+          end: -8.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 2,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: -8.0, end: 8.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(
+          begin: -8.0,
+          end: 8.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 2,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 8.0, end: -4.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(
+          begin: 8.0,
+          end: -4.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 1,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: -4.0, end: 4.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(
+          begin: -4.0,
+          end: 4.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 1,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 4.0, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(
+          begin: 4.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 1,
       ),
     ]).animate(_shakeController);
@@ -191,17 +205,17 @@ class _GamePageState extends State<GamePage>
                 'Guess the word in 5 tries',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1F5C4B),
-                    ),
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1F5C4B),
+                ),
               ),
               const SizedBox(height: 6.0),
               Text(
                 'Use the clues to narrow it down.',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.black54,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
               ),
               const SizedBox(height: 18.0),
               for (var guess in _game.guesses) _buildGuessRow(guess),
@@ -266,7 +280,8 @@ class _GamePageState extends State<GamePage>
                           child: Text(
                             _message!,
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
                                   color: const Color(0xFF1F5C4B),
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -370,12 +385,12 @@ class Tile extends StatelessWidget {
         child: Text(
           letter.toUpperCase(),
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: switch (hitType) {
-                  HitType.none => const Color(0xFF1F5C4B),
-                  _ => Colors.white,
-                },
-              ),
+            fontWeight: FontWeight.w800,
+            color: switch (hitType) {
+              HitType.none => const Color(0xFF1F5C4B),
+              _ => Colors.white,
+            },
+          ),
         ),
       ),
     );
