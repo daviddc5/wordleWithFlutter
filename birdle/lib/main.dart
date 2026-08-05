@@ -61,8 +61,23 @@ class GuessInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // You'll build the UI in the next steps.
-    return Container(); // Placeholder
+    return Row(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              maxLength: 5,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(35)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
