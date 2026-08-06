@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
 
@@ -81,6 +82,8 @@ class _GamePageState extends State<GamePage>
   bool get _isGameOver => _game.didWin || _game.didLose;
 
   int get _guessesLeft => _game.guessesRemaining;
+
+  int get _attemptsUsed => _game.numAllowedGuesses - _guessesLeft;
 
   @override
   void initState() {
@@ -210,6 +213,97 @@ class _GamePageState extends State<GamePage>
           style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
       ],
+    );
+  }
+
+  String _emojiForHitType(HitType hitType) {
+    return switch (hitType) {
+      HitType.hit => '🟩',
+      HitType.partial => '🟨',
+      HitType.miss || HitType.removed || HitType.none => '⬜',
+    };
+  }
+
+  String _buildShareResultText() {
+    final completedGuesses = _game.guesses.where((guess) => guess.isNotEmpty);
+    final resultHeader = _game.didWin
+        ? 'Wordle $_attemptsUsed/${_game.numAllowedGuesses}'
+        : 'Wordle X/${_game.numAllowedGuesses}';
+    final grid = completedGuesses
+        .map(
+          (guess) => guess.map((letter) => _emojiForHitType(letter.type)).join(),
+        )
+        .join('\n');
+
+    return '$resultHeader\n$grid';
+  }
+
+  Future<void> _copyShareResult() async {
+    final shareText = _buildShareResultText();
+    await Clipboard.setData(ClipboardData(text: shareText));
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Result copied to clipboard')),
+    );
+  }
+
+  Widget _buildRoundSummary(BuildContext context) {
+    final didWin = _game.didWin;
+    final title = didWin ? 'Round complete' : 'Better luck next time';
+    final subtitle = didWin
+        ? 'You solved it in $_attemptsUsed ${_attemptsUsed == 1 ? 'try' : 'tries'}.'
+        : 'The word was ${_game.hiddenWord.toString().toUpperCase()} after $_attemptsUsed tries.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: didWin ? const Color(0xFFEAF6EC) : const Color(0xFFF8ECEC),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: didWin ? const Color(0xFFB9DEC0) : const Color(0xFFE6C4C4),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                didWin ? Icons.emoji_events : Icons.flag,
+                color: didWin ? const Color(0xFF2D7B3F) : const Color(0xFF985454),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: didWin ? const Color(0xFF2D7B3F) : const Color(0xFF7B3636),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: _restartGame,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Play again'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _copyShareResult,
+            icon: const Icon(Icons.share),
+            label: const Text('Copy result'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -381,6 +475,10 @@ class _GamePageState extends State<GamePage>
                         ),
                       ),
               ),
+              if (_isGameOver) ...[
+                const SizedBox(height: 12),
+                _buildRoundSummary(context),
+              ],
               const SizedBox(height: 10.0),
               TextButton.icon(
                 style: TextButton.styleFrom(
