@@ -46,8 +46,15 @@ class MainApp extends StatelessWidget {
             ),
           ),
           child: SafeArea(
-            child: SingleChildScrollView(
-              child: const Center(child: GamePage()),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: const Center(child: GamePage()),
+                  ),
+                );
+              },
             ),
           ),
         ),
@@ -65,12 +72,15 @@ class GamePage extends StatefulWidget {
 
 class _GamePageState extends State<GamePage>
     with SingleTickerProviderStateMixin {
-  final Game _game = Game();
   static const _gamesPlayedKey = 'gamesPlayed';
   static const _gamesWonKey = 'gamesWon';
   static const _currentStreakKey = 'currentStreak';
   static const _bestStreakKey = 'bestStreak';
+  static const _isDailyModeKey = 'isDailyMode';
+  static const _soundEnabledKey = 'soundEnabled';
+  static const _hardModeEnabledKey = 'hardModeEnabled';
 
+  late Game _game;
   String? _message;
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
@@ -78,6 +88,9 @@ class _GamePageState extends State<GamePage>
   int _gamesWon = 0;
   int _currentStreak = 0;
   int _bestStreak = 0;
+  bool _isDailyMode = true;
+  bool _soundEnabled = true;
+  bool _hardModeEnabled = false;
 
   bool get _isGameOver => _game.didWin || _game.didLose;
 
@@ -88,7 +101,8 @@ class _GamePageState extends State<GamePage>
   @override
   void initState() {
     super.initState();
-    _loadStats();
+    _game = _createGame(isDailyMode: _isDailyMode);
+    _loadPreferences();
     _shakeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 450),
@@ -158,12 +172,20 @@ class _GamePageState extends State<GamePage>
 
   void _restartGame() {
     setState(() {
-      _game.resetGame();
+      _game = _createGame(isDailyMode: _isDailyMode);
       _message = null;
     });
   }
 
-  Future<void> _loadStats() async {
+  Game _createGame({required bool isDailyMode}) {
+    if (isDailyMode) {
+      return Game(seed: dailySeedForDate(DateTime.now()));
+    }
+
+    return Game();
+  }
+
+  Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
 
@@ -172,15 +194,22 @@ class _GamePageState extends State<GamePage>
       _gamesWon = prefs.getInt(_gamesWonKey) ?? 0;
       _currentStreak = prefs.getInt(_currentStreakKey) ?? 0;
       _bestStreak = prefs.getInt(_bestStreakKey) ?? 0;
+      _isDailyMode = prefs.getBool(_isDailyModeKey) ?? true;
+      _soundEnabled = prefs.getBool(_soundEnabledKey) ?? true;
+      _hardModeEnabled = prefs.getBool(_hardModeEnabledKey) ?? false;
+      _game = _createGame(isDailyMode: _isDailyMode);
     });
   }
 
-  Future<void> _saveStats() async {
+  Future<void> _savePreferences() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_gamesPlayedKey, _gamesPlayed);
     await prefs.setInt(_gamesWonKey, _gamesWon);
     await prefs.setInt(_currentStreakKey, _currentStreak);
     await prefs.setInt(_bestStreakKey, _bestStreak);
+    await prefs.setBool(_isDailyModeKey, _isDailyMode);
+    await prefs.setBool(_soundEnabledKey, _soundEnabled);
+    await prefs.setBool(_hardModeEnabledKey, _hardModeEnabled);
   }
 
   void _recordGameResult({required bool didWin}) {
@@ -196,7 +225,111 @@ class _GamePageState extends State<GamePage>
       _currentStreak = 0;
     }
 
-    _saveStats();
+    _savePreferences();
+  }
+
+  void _switchMode(bool isDailyMode) {
+    setState(() {
+      _isDailyMode = isDailyMode;
+      _game = _createGame(isDailyMode: _isDailyMode);
+      _message = null;
+    });
+    _savePreferences();
+  }
+
+  bool _matchesHardModeRules(String guess) {
+    final previousGuess = _game.previousGuess;
+    if (previousGuess.isEmpty) {
+      return true;
+    }
+
+    for (var i = 0; i < previousGuess.length; i++) {
+      final letter = previousGuess[i];
+      if (letter.type == HitType.hit && guess[i] != letter.char) {
+        return false;
+      }
+    }
+
+    for (final letter in previousGuess) {
+      if (letter.type == HitType.partial && !guess.contains(letter.char)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  Future<void> _openSettings() async {
+    var soundEnabled = _soundEnabled;
+    var hardModeEnabled = _hardModeEnabled;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Settings',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Daily mode'),
+                      subtitle: const Text('Use the same word for the current day.'),
+                      value: _isDailyMode,
+                      onChanged: (value) {
+                        Navigator.of(context).pop();
+                        _switchMode(value);
+                      },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Sound effects'),
+                      subtitle: const Text('Prepare for future sound feedback.'),
+                      value: soundEnabled,
+                      onChanged: (value) {
+                        setModalState(() {
+                          soundEnabled = value;
+                        });
+                        setState(() {
+                          _soundEnabled = value;
+                        });
+                        _savePreferences();
+                      },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Hard mode'),
+                      subtitle: const Text('Future guesses must respect revealed clues.'),
+                      value: hardModeEnabled,
+                      onChanged: (value) {
+                        setModalState(() {
+                          hardModeEnabled = value;
+                        });
+                        setState(() {
+                          _hardModeEnabled = value;
+                        });
+                        _savePreferences();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildStat(String label, int value) {
@@ -226,12 +359,14 @@ class _GamePageState extends State<GamePage>
 
   String _buildShareResultText() {
     final completedGuesses = _game.guesses.where((guess) => guess.isNotEmpty);
+    final modeLabel = _isDailyMode ? 'Daily' : 'Practice';
     final resultHeader = _game.didWin
-        ? 'Wordle $_attemptsUsed/${_game.numAllowedGuesses}'
-        : 'Wordle X/${_game.numAllowedGuesses}';
+      ? 'Wordle $modeLabel $_attemptsUsed/${_game.numAllowedGuesses}'
+      : 'Wordle $modeLabel X/${_game.numAllowedGuesses}';
     final grid = completedGuesses
         .map(
-          (guess) => guess.map((letter) => _emojiForHitType(letter.type)).join(),
+          (guess) =>
+              guess.map((letter) => _emojiForHitType(letter.type)).join(),
         )
         .join('\n');
 
@@ -243,9 +378,9 @@ class _GamePageState extends State<GamePage>
     await Clipboard.setData(ClipboardData(text: shareText));
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Result copied to clipboard')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Result copied to clipboard')));
   }
 
   Widget _buildRoundSummary(BuildContext context) {
@@ -272,14 +407,18 @@ class _GamePageState extends State<GamePage>
             children: [
               Icon(
                 didWin ? Icons.emoji_events : Icons.flag,
-                color: didWin ? const Color(0xFF2D7B3F) : const Color(0xFF985454),
+                color: didWin
+                    ? const Color(0xFF2D7B3F)
+                    : const Color(0xFF985454),
               ),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: didWin ? const Color(0xFF2D7B3F) : const Color(0xFF7B3636),
+                  color: didWin
+                      ? const Color(0xFF2D7B3F)
+                      : const Color(0xFF7B3636),
                 ),
               ),
             ],
@@ -320,6 +459,12 @@ class _GamePageState extends State<GamePage>
         return;
       }
 
+      if (_hardModeEnabled && !_matchesHardModeRules(guess)) {
+        _message = 'Hard mode: reuse every revealed clue in your next guess.';
+        _triggerInvalidGuessShake();
+        return;
+      }
+
       _game.guess(guess);
 
       if (_game.didWin) {
@@ -338,15 +483,18 @@ class _GamePageState extends State<GamePage>
   Widget _buildGuessRow(Word guess) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2.5),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (var letter in guess)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2.5),
-              child: Tile(letter.char, letter.type),
-            ),
-        ],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var letter in guess)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                child: Tile(letter.char, letter.type),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -382,6 +530,37 @@ class _GamePageState extends State<GamePage>
                 ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
               ),
               const SizedBox(height: 12.0),
+              Row(
+                children: [
+                  Expanded(
+                    child: SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment<bool>(
+                          value: true,
+                          label: Text('Daily'),
+                          icon: Icon(Icons.today),
+                        ),
+                        ButtonSegment<bool>(
+                          value: false,
+                          label: Text('Practice'),
+                          icon: Icon(Icons.casino),
+                        ),
+                      ],
+                      selected: {_isDailyMode},
+                      onSelectionChanged: (selection) {
+                        _switchMode(selection.first);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    tooltip: 'Settings',
+                    onPressed: _openSettings,
+                    icon: const Icon(Icons.settings),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12.0),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
@@ -393,8 +572,11 @@ class _GamePageState extends State<GamePage>
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: const Color(0xFFD8E6DC)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceEvenly,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 16,
+                  runSpacing: 8,
                   children: [
                     _buildStat('Played', _gamesPlayed),
                     _buildStat('Wins', _gamesWon),
@@ -406,16 +588,26 @@ class _GamePageState extends State<GamePage>
               const SizedBox(height: 18.0),
               for (var guess in _game.guesses) _buildGuessRow(guess),
               const SizedBox(height: 16.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
+                  Chip(
+                    avatar: Icon(
+                      _isDailyMode ? Icons.today : Icons.casino,
+                      size: 18,
+                    ),
+                    label: Text(_isDailyMode ? 'Daily mode' : 'Practice mode'),
+                    backgroundColor: const Color(0xFFF2F4EF),
+                    side: BorderSide.none,
+                  ),
                   Chip(
                     avatar: const Icon(Icons.timer_outlined, size: 18),
                     label: Text('$_guessesLeft guesses left'),
                     backgroundColor: const Color(0xFFEAF2EC),
                     side: BorderSide.none,
                   ),
-                  const SizedBox(width: 8.0),
                   if (_isGameOver)
                     Chip(
                       avatar: Icon(
